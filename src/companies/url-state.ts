@@ -1,6 +1,6 @@
 import { COMPANY_SORTS, COMPANY_STATUSES, type CompanySort, type CompanyStatus, type ListCompaniesParams } from "./contracts";
 
-type ListState = { q: string; status: CompanyStatus | null; sort: CompanySort; page: number };
+type ListState = { q: string; status: CompanyStatus | null; sort: CompanySort; page: number; drawer: string | null };
 export const PAGE_SIZE = 20;
 const MAX_PAGE = Math.floor(Number.MAX_SAFE_INTEGER / PAGE_SIZE);
 
@@ -14,6 +14,7 @@ export function normalizeListUrl(search: URLSearchParams): ListState {
     status: COMPANY_STATUSES.find((value) => value === rawStatus) ?? null,
     sort: COMPANY_SORTS.find((value) => value === rawSort) ?? "-created_at",
     page: /^[1-9]\d*$/.test(rawPage) && Number.isSafeInteger(page) && page <= MAX_PAGE ? page : 1,
+    drawer: search.get("drawer") || null,
   };
 }
 
@@ -23,6 +24,9 @@ export function listApiParams(state: ListState): ListCompaniesParams {
 
 export function updateListUrl(current: URLSearchParams, changes: Partial<ListState>): string {
   const next = new URLSearchParams(current.toString());
+  if (changes.drawer !== undefined) {
+    if (changes.drawer) next.set("drawer", changes.drawer); else next.delete("drawer");
+  }
   if (changes.q !== undefined) {
     if (changes.q.trim()) next.set("q", changes.q.trim()); else next.delete("q");
   }

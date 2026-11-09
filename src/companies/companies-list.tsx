@@ -9,6 +9,7 @@ import { useSession } from "@/auth/provider";
 import { COMPANY_STATUSES, type CompanyStatus, type CompanySort } from "./contracts";
 import { createCompanyQueries } from "./queries";
 import { HighlightMatch } from "./highlight-match";
+import { CompanyDrawer } from "./company-drawer";
 import { listApiParams, normalizeListUrl, PAGE_SIZE, updateListUrl } from "./url-state";
 
 export function CompaniesList() {
@@ -20,6 +21,8 @@ export function CompaniesList() {
   const [draftState, setDraftState] = useState({ urlQ: state.q, value: state.q });
   const draft = draftState.urlQ === state.q ? draftState.value : state.q;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const createButton = useRef<HTMLButtonElement>(null);
 
   const cancelSearch = useCallback(() => {
     if (timer.current !== null) { clearTimeout(timer.current); timer.current = null; }
@@ -98,9 +101,12 @@ export function CompaniesList() {
 
   return (
     <section aria-labelledby="companies-title" className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 id="companies-title" className="text-2xl font-medium tracking-tight">{t.title}</h1>
-        {data && !query.isPlaceholderData && <p className="text-sm tabular-nums text-stone-600">{data.total} {t.results}</p>}
+        <div className="flex items-center gap-4">
+          {data && !query.isPlaceholderData && <p className="text-sm tabular-nums text-stone-600">{data.total} {t.results}</p>}
+          <button ref={createButton} type="button" onClick={(event) => { opener.current = event.currentTarget; navigate({ drawer: "new" }); }} className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900">{t.createCompany}</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -139,7 +145,7 @@ export function CompaniesList() {
             </thead>
             <tbody>
               {data?.items.map((company) => <tr key={company.id} className="border-t border-stone-100">
-                <th scope="row" className="sticky left-0 z-10 truncate bg-white px-4 py-3 font-medium"><HighlightMatch text={company.name} query={highlightQuery} /></th>
+                <th scope="row" className="sticky left-0 z-10 truncate bg-white px-4 py-3 font-medium"><button type="button" onClick={(event) => { opener.current = event.currentTarget; navigate({ drawer: company.id }); }} className="max-w-full truncate text-left hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"><HighlightMatch text={company.name} query={highlightQuery} /></button></th>
                 <td className="truncate px-4 py-3 text-stone-600">{company.domain ? <HighlightMatch text={company.domain} query={highlightQuery} /> : t.missingDomain}</td>
                 <td className="px-4 py-3 text-stone-700">{statuses[company.status]}</td>
                 <td className="whitespace-nowrap px-4 py-3 tabular-nums text-stone-600">{formatDate(company.created_at, locale)}</td>
@@ -161,6 +167,7 @@ export function CompaniesList() {
           </div>
         </div>
       </div>
+      <CompanyDrawer drawer={state.drawer} onClose={() => navigate({ drawer: null })} onCreated={(id) => navigate({ drawer: id }, true)} openerRef={opener} fallbackRef={createButton} />
     </section>
   );
 }

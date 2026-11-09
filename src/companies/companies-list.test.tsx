@@ -72,15 +72,15 @@ function open(path = "/companies") {
   return renderWithProviders(<CompaniesList />, { session: true });
 }
 
-const lastRequest = () => requests.at(-1)?.searchParams;
+const lastRequest = () => requests.filter((request) => request.pathname === "/api/v1/companies").at(-1)?.searchParams;
 
 describe("companies list URL and data", () => {
   it("filters, resets pagination, sorts and navigates with actual URL-driven controls and requests", async () => {
-    open("/companies?page=2&drawer=company-1");
+    open("/companies?page=2&trace=company-1");
     await screen.findByText("Firm 20");
     expect(lastRequest()?.get("offset")).toBe("20");
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "qualified" } });
-    expect(window.location.search).toContain("drawer=company-1");
+    expect(window.location.search).toContain("trace=company-1");
     expect(window.location.search).not.toContain("page=");
     await waitFor(() => expect(lastRequest()?.get("status")).toBe("qualified"));
     expect(lastRequest()?.get("offset")).toBe("0");
@@ -104,7 +104,7 @@ describe("companies list URL and data", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     await waitFor(() => expect(lastRequest()?.get("offset")).toBe("20"));
     expect(window.location.search).toContain("page=2");
-    expect(window.location.search).toContain("drawer=company-1");
+    expect(window.location.search).toContain("trace=company-1");
   });
 
   it("restores controls on browser navigation and cancels pending search when going Back", async () => {
