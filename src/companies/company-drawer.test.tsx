@@ -131,10 +131,14 @@ describe("company drawer", () => {
     expect(await screen.findByText("Enter a company name.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Company name" })).toHaveAttribute("aria-describedby", "drawer-name-error");
     intercept = null;
+    fireEvent.click(within(dialog).getByRole("combobox", { name: "Status" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Qualified" }));
+    expect(within(dialog).getByRole("combobox", { name: "Status" })).toHaveTextContent("Qualified");
     fireEvent.click(within(dialog).getByRole("button", { name: "Create company" }));
     await waitFor(() => expect(window.location.search).toContain("drawer=company-3"));
     expect(await screen.findByText(/may not appear under the current filters/)).toBeInTheDocument();
     expect((calls.find((call) => call.method === "POST")?.body as { domain: string | null }).domain).toBeNull();
+    expect((calls.filter((call) => call.method === "POST").at(-1)?.body as { status: string }).status).toBe("qualified");
   });
 
   it("captures the opening record before any edit and ignores a pre-typing refetch", async () => {

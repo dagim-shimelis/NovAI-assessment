@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession } from "@/auth/provider";
 import { useLocalization } from "@/i18n/provider";
 import { formatDate } from "@/i18n/locale";
@@ -105,6 +106,11 @@ function CompanyFields({ draft, setDraft, fields, disabled }: {
     qualified: t.statusQualified, rejected: t.statusRejected,
   };
   const inputClass = "w-full rounded-md border border-stone-400 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900 aria-invalid:border-red-700";
+  const statusErrorId = fields.errors.status ? "drawer-status-error" : undefined;
+  function changeStatus(value: string) {
+    const status = COMPANY_STATUSES.find((item) => item === value);
+    if (status) { setDraft({ ...draft, status }); fields.clearError("status"); }
+  }
   return <div className="flex flex-col gap-5">
     <div className="flex flex-col gap-1.5">
       <label htmlFor="drawer-name" className="text-sm font-medium">{t.nameLabel}</label>
@@ -118,9 +124,12 @@ function CompanyFields({ draft, setDraft, fields, disabled }: {
     </div>
     <div className="flex flex-col gap-1.5">
       <label htmlFor="drawer-status" className="text-sm font-medium">{t.statusFilter}</label>
-      <select id="drawer-status" value={draft.status} disabled={disabled} onChange={(event) => { const status = COMPANY_STATUSES.find((item) => item === event.target.value); if (status) setDraft({ ...draft, status }); fields.clearError("status"); }} aria-invalid={Boolean(fields.errors.status)} aria-describedby={fields.errors.status ? "drawer-status-error" : undefined} className={inputClass}>
-        {COMPANY_STATUSES.map((status) => <option key={status} value={status}>{statuses[status]}</option>)}
-      </select>
+      <Select value={draft.status} disabled={disabled} onValueChange={changeStatus}>
+        <SelectTrigger id="drawer-status" aria-label={t.statusFilter} aria-invalid={Boolean(fields.errors.status)} aria-describedby={statusErrorId}><SelectValue /></SelectTrigger>
+        <SelectContent><SelectGroup>
+          {COMPANY_STATUSES.map((status) => <SelectItem key={status} value={status}>{statuses[status]}</SelectItem>)}
+        </SelectGroup></SelectContent>
+      </Select>
       {fields.errors.status && <p id="drawer-status-error" className="text-sm text-red-800">{t[fields.errors.status]}</p>}
     </div>
   </div>;

@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open <http://localhost:3000/companies>. Unauthenticated visits go to `/sign-in`; enter **any nonempty token** (for example `demo`) and continue. The token lives in this tab's `sessionStorage`; it is attached to API requests but is **not** a real credential. Sign out clears it and cached company data. A 401 also clears the session and returns to sign-in, preserving a validated local destination. To change languages, use the EN/NL buttons in the header; the selection persists in a cookie.
+Open <http://localhost:3000/companies>. Unauthenticated visits go to `/sign-in`; enter **any nonempty token** (for example `demo`) and continue. The token lives in this tab's `sessionStorage`; it is attached to API requests but is **not** a real credential. Sign out clears it and cached company data. A 401 also clears the session and returns to sign-in, preserving a validated local destination. To change languages, use the flag-and-code dropdown in the header; the selection persists in a cookie.
 
 ```sh
 pnpm lint
@@ -35,7 +35,7 @@ The `/companies` URL owns list and drawer navigation state:
 | `page` | `?page=2` | One-based page; **20 rows per page** |
 | `drawer` | `?drawer=new` or `?drawer=company-001` | Create or open a shareable detail/edit drawer |
 
-For example, `/companies?status=contacted&sort=name&page=2&drawer=company-003` preserves the list while the drawer opens. Search typing is debounced (350 ms) and **replaces** the current history entry; discrete filter, sort, page and drawer actions **push** entries. Search/filter/sort changes reset the page. Refresh and Back/Forward restore normalized controls and drawer. Invalid status, sort or page values use defaults without silently rewriting the URL. The prior table remains visible while a different query loads; its rows are not highlighted as matches for the new search until that query succeeds.
+For example, `/companies?status=contacted&sort=name&page=2&drawer=company-003` preserves the list while the drawer opens. Search typing is debounced (350 ms) and **replaces** the current history entry; discrete filter, sort, page and drawer actions **push** entries. Search/filter/sort changes reset the page. Refresh and Back/Forward restore normalized controls and drawer. Invalid status, sort or page values use defaults without silently rewriting the URL. The prior table remains visible while a different query loads; the search icon spins during typing/fetching, and old rows are not highlighted as new-query matches. Status controls use shadcn Select in the list and drawer. Click anywhere on a company row to open its detail; its name remains a keyboard-accessible button.
 
 Four mock Route Handler operations require `Authorization: Bearer <nonempty token>` and each waits **300–800 ms**, even on errors:
 

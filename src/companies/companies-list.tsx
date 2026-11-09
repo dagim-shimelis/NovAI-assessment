@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { LoaderCircleIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocalization } from "@/i18n/provider";
 import { formatDate } from "@/i18n/locale";
 import { useSession } from "@/auth/provider";
@@ -73,6 +75,7 @@ export function CompaniesList() {
   });
   const data = query.data;
   const highlightQuery = query.isPlaceholderData ? "" : state.q;
+  const isSearching = draft !== state.q || (Boolean(state.q) && query.isFetching);
   const isLoading = session.state === "loading" || session.state === "unauthenticated" || query.isPending;
   const statuses: Record<CompanyStatus, string> = {
     new: t.statusNew, researching: t.statusResearching, contacted: t.statusContacted,
@@ -105,24 +108,32 @@ export function CompaniesList() {
         <h1 id="companies-title" className="text-2xl font-medium tracking-tight">{t.title}</h1>
         <div className="flex items-center gap-4">
           {data && !query.isPlaceholderData && <p className="text-sm tabular-nums text-stone-600">{data.total} {t.results}</p>}
-          <button ref={createButton} type="button" onClick={(event) => { opener.current = event.currentTarget; navigate({ drawer: "new" }); }} className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900">{t.createCompany}</button>
+          <button ref={createButton} type="button" onClick={(event) => { opener.current = event.currentTarget; navigate({ drawer: "new" }); }} className="flex items-center gap-2 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"><PlusIcon aria-hidden={true} className="size-4" />{t.createCompany}</button>
         </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-56 flex-1 sm:max-w-sm">
           <label htmlFor="company-search" className="mb-1.5 block text-sm font-medium">{t.searchLabel}</label>
-          <input id="company-search" type="search" value={draft} placeholder={t.searchPlaceholder} onChange={(event) => changeSearch(event.target.value)} className="w-full rounded-md border border-stone-400 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900" />
+          <div className="relative">
+            <input id="company-search" type="search" value={draft} placeholder={t.searchPlaceholder} onChange={(event) => changeSearch(event.target.value)} className="w-full rounded-md border border-stone-400 bg-white py-2 pl-10 pr-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900" />
+            {isSearching
+              ? <LoaderCircleIcon aria-hidden={true} data-testid="search-spinner" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-600 motion-safe:animate-spin" />
+              : <SearchIcon aria-hidden={true} data-testid="search-icon" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-600" />}
+          </div>
         </div>
         <div className="min-w-44">
           <label htmlFor="company-status" className="mb-1.5 block text-sm font-medium">{t.statusFilter}</label>
-          <select id="company-status" value={state.status ?? ""} onChange={(event) => {
-            const value = COMPANY_STATUSES.find((status) => status === event.target.value) ?? null;
-            navigate({ status: value, page: 1 });
-          }} className="w-full rounded-md border border-stone-400 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900">
-            <option value="">{t.allStatuses}</option>
-            {COMPANY_STATUSES.map((status) => <option key={status} value={status}>{statuses[status]}</option>)}
-          </select>
+          <Select value={state.status ?? "all"} onValueChange={(value) => {
+            const status = COMPANY_STATUSES.find((item) => item === value) ?? null;
+            navigate({ status, page: 1 });
+          }}>
+            <SelectTrigger id="company-status" aria-label={t.statusFilter}><SelectValue /></SelectTrigger>
+            <SelectContent><SelectGroup>
+              <SelectItem value="all">{t.allStatuses}</SelectItem>
+              {COMPANY_STATUSES.map((status) => <SelectItem key={status} value={status}>{statuses[status]}</SelectItem>)}
+            </SelectGroup></SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -144,8 +155,8 @@ export function CompaniesList() {
               </tr>
             </thead>
             <tbody>
-              {data?.items.map((company) => <tr key={company.id} className="border-t border-stone-100">
-                <th scope="row" className="sticky left-0 z-10 truncate bg-white px-4 py-3 font-medium"><button type="button" onClick={(event) => { opener.current = event.currentTarget; navigate({ drawer: company.id }); }} className="max-w-full truncate text-left hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"><HighlightMatch text={company.name} query={highlightQuery} /></button></th>
+              {data?.items.map((company) => <tr key={company.id} onClick={(event) => { opener.current = event.currentTarget.querySelector("button"); navigate({ drawer: company.id }); }} className="group cursor-pointer border-t border-stone-100 hover:bg-stone-100 focus-within:bg-stone-100">
+                <th scope="row" className="sticky left-0 z-10 truncate bg-white px-4 py-3 font-medium group-hover:bg-stone-100 group-focus-within:bg-stone-100"><button type="button" onClick={(event) => { event.stopPropagation(); opener.current = event.currentTarget; navigate({ drawer: company.id }); }} className="max-w-full truncate text-left hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900"><HighlightMatch text={company.name} query={highlightQuery} /></button></th>
                 <td className="truncate px-4 py-3 text-stone-600">{company.domain ? <HighlightMatch text={company.domain} query={highlightQuery} /> : t.missingDomain}</td>
                 <td className="px-4 py-3 text-stone-700">{statuses[company.status]}</td>
                 <td className="whitespace-nowrap px-4 py-3 tabular-nums text-stone-600">{formatDate(company.created_at, locale)}</td>

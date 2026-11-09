@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSyncExternalStore } from "react";
 import { renderWithProviders } from "@/test/render";
@@ -74,17 +74,22 @@ function open(path = "/companies") {
 
 const lastRequest = () => requests.filter((request) => request.pathname === "/api/v1/companies").at(-1)?.searchParams;
 
+async function chooseStatus(label: string) {
+  fireEvent.click(screen.getByRole("combobox", { name: "Status" }));
+  fireEvent.click(await screen.findByRole("option", { name: label }));
+}
+
 describe("companies list URL and data", () => {
   it("filters, resets pagination, sorts and navigates with actual URL-driven controls and requests", async () => {
     open("/companies?page=2&trace=company-1");
     await screen.findByText("Firm 20");
     expect(lastRequest()?.get("offset")).toBe("20");
-    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "qualified" } });
+    await chooseStatus("Qualified");
     expect(window.location.search).toContain("trace=company-1");
     expect(window.location.search).not.toContain("page=");
     await waitFor(() => expect(lastRequest()?.get("status")).toBe("qualified"));
     expect(lastRequest()?.get("offset")).toBe("0");
-    expect(screen.getByLabelText("Status")).toHaveValue("qualified");
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveTextContent("Qualified");
     expect(screen.getByRole("button", { name: "Sort by name, Ascending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sort by creation date, Ascending" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sort by name, Ascending" }));
@@ -99,7 +104,7 @@ describe("companies list URL and data", () => {
     await waitFor(() => expect(lastRequest()?.get("sort")).toBe("created_at"));
     expect(screen.getByRole("columnheader", { name: /Created/ })).toHaveAttribute("aria-sort", "ascending");
     expect(screen.getByRole("button", { name: "Sort by creation date, Descending" })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "" } });
+    await chooseStatus("All statuses");
     await waitFor(() => expect(screen.getByRole("button", { name: "Next" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     await waitFor(() => expect(lastRequest()?.get("offset")).toBe("20"));
@@ -111,9 +116,9 @@ describe("companies list URL and data", () => {
     open("/companies?q=Firm&status=new&page=2");
     await waitFor(() => expect(lastRequest()?.get("offset")).toBe("20"));
     expect(screen.getByLabelText("Search companies")).toHaveValue("Firm");
-    expect(screen.getByLabelText("Status")).toHaveValue("new");
-    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "contacted" } });
-    await waitFor(() => expect(screen.getByLabelText("Status")).toHaveValue("contacted"));
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveTextContent("New");
+    await chooseStatus("Contacted");
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Status" })).toHaveTextContent("Contacted"));
     fireEvent.change(screen.getByLabelText("Search companies"), { target: { value: "stale draft" } });
     // popstate represents a real history navigation; the controls and request must follow it.
     act(() => {
@@ -121,7 +126,7 @@ describe("companies list URL and data", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
     expect(screen.getByLabelText("Search companies")).toHaveValue("Firm");
-    expect(screen.getByLabelText("Status")).toHaveValue("new");
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveTextContent("New");
     await waitFor(() => expect(lastRequest()?.get("status")).toBe("new"));
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(window.location.search).toContain("q=Firm");
@@ -130,10 +135,13 @@ describe("companies list URL and data", () => {
   it("debounces search replacement and distinguishes empty results from out-of-range pages", async () => {
     open();
     await screen.findByText("Firm 40");
+    expect(screen.getByTestId("search-icon")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Search companies"), { target: { value: "no match" } });
+    expect(screen.getByTestId("search-spinner")).toBeInTheDocument();
     expect(window.location.search).toBe("");
     await waitFor(() => expect(window.location.search).toContain("q=no+match"));
     expect(await screen.findByText("No companies match these filters.")).toBeInTheDocument();
+    expect(screen.getByTestId("search-icon")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     await screen.findByText("Firm 40");
     act(() => window.history.pushState(null, "", "/companies?page=99"));
@@ -141,6 +149,21 @@ describe("companies list URL and data", () => {
     fireEvent.click(screen.getByRole("button", { name: "Go to first page" }));
     await screen.findByText("Firm 40");
     expect(window.location.search).not.toContain("page=");
+  });
+
+  it("opens a detail drawer from the full row while keeping the name button keyboard-accessible", async () => {
+    open();
+    const name = await screen.findByRole("rowheader", { name: "Firm 40" });
+    const row = name.closest("tr");
+    expect(row).not.toBeNull();
+    expect(row).toHaveClass("cursor-pointer", "hover:bg-stone-100");
+    fireEvent.click(within(row!).getByRole("cell", { name: "firm40.example" }));
+    expect(window.location.search).toContain("drawer=company-40");
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close drawer" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(within(row!).getByRole("button", { name: "Firm 40" }));
+    expect(window.location.search).toContain("drawer=company-40");
   });
 
   it("highlights case-insensitive literal search matches in names and domains", async () => {
@@ -164,7 +187,7 @@ describe("companies list URL and data", () => {
       .mockImplementationOnce(() => new Promise<Response>((resolve) => { resolveNext = resolve; }));
     open();
     await screen.findByText("Firm 40");
-    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "new" } });
+    await chooseStatus("New");
     expect(screen.getByText("Firm 40")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Updating companies");
     expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
