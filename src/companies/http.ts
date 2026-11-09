@@ -15,7 +15,8 @@ export function errorResponse(status: number, code: ApiErrorCode, message: strin
 export async function authenticated(request: Request, action: () => Promise<Response> | Response): Promise<Response> {
   // Delay even failed authentication, validation, and missing-record responses.
   await requestDelay();
-  if (!/^Bearer \S+$/.test(request.headers.get("Authorization") ?? "")) {
+  const authorization = request.headers.get("Authorization");
+  if (!authorization?.startsWith("Bearer ") || !authorization.slice(7).trim()) {
     return errorResponse(401, "unauthorized", "Bearer token required");
   }
   try {

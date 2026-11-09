@@ -59,7 +59,8 @@ describe("companies HTTP contracts", () => {
     }
     expect((await list(req("", { headers: { Authorization: "Bearer " } }))).status).toBe(401);
     expect((await list(req("", { headers: { Authorization: "Basic abc" } }))).status).toBe(401);
-    expect(vi.mocked(requestDelay)).toHaveBeenCalledTimes(6);
+    expect((await list(req("", { headers: { Authorization: "Bearer demo token" } }))).status).toBe(200);
+    expect(vi.mocked(requestDelay)).toHaveBeenCalledTimes(7);
   });
 
   it("validates query bounds and body fields and handles malformed JSON", async () => {
