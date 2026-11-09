@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { createCompaniesClient, type CompaniesClient } from "@/companies/client";
 import { companyKeys } from "@/companies/queries";
-import { SESSION_KEY, safeReturnTo, signInPath } from "./session";
+import { DISPLAY_NAME_KEY, SESSION_KEY, safeReturnTo, signInPath } from "./session";
 
 type AuthState = "loading" | "authenticated" | "unauthenticated";
 type Session = {
   state: AuthState;
+  displayName: string;
   client: CompaniesClient;
-  signIn: (token: string, destination: string | null) => void;
+  signIn: (token: string, destination: string | null, displayName?: string) => void;
   signOut: () => void;
   redirectToSignIn: () => void;
 };
@@ -36,8 +37,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const state = useSyncExternalStore<AuthState>(subscribe, sessionSnapshot, () => "loading");
 
+  const displayName = useSyncExternalStore(subscribe, () => window.sessionStorage.getItem(DISPLAY_NAME_KEY) ?? "", () => "");
+
   const clearSession = useCallback(() => {
     window.sessionStorage.removeItem(SESSION_KEY);
+    window.sessionStorage.removeItem(DISPLAY_NAME_KEY);
     void queryClient.cancelQueries({ queryKey: companyKeys.all });
     queryClient.removeQueries({ queryKey: companyKeys.all });
     notifySession();
@@ -59,10 +63,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     onUnauthorized,
   }), [onUnauthorized]);
 
-  const signIn = useCallback((value: string, destination: string | null) => {
+  const signIn = useCallback((value: string, destination: string | null, name = "") => {
     const trimmed = value.trim();
     if (!trimmed) return;
     window.sessionStorage.setItem(SESSION_KEY, trimmed);
+    window.sessionStorage.setItem(DISPLAY_NAME_KEY, name.trim());
     notifySession();
     router.replace(safeReturnTo(destination));
   }, [router]);
@@ -73,7 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [clearSession, redirectToSignIn]);
 
   return (
-    <SessionContext.Provider value={{ state, client, signIn, signOut, redirectToSignIn }}>
+    <SessionContext.Provider value={{ state, displayName, client, signIn, signOut, redirectToSignIn }}>
       {children}
     </SessionContext.Provider>
   );

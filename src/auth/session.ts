@@ -1,3 +1,4 @@
+export const DISPLAY_NAME_KEY = "novai-demo-name";
 export const SESSION_KEY = "novai-assessment-token";
 
 export function safeReturnTo(value: string | null): string {

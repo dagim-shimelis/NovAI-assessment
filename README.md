@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open <http://localhost:3000/companies>. Unauthenticated visits go to `/sign-in`; enter **any nonempty token** (for example `demo`) and continue. The token lives in this tab's `sessionStorage`; it is attached to API requests but is **not** a real credential. Sign out clears it and cached company data. A 401 also clears the session and returns to sign-in, preserving a validated local destination. To change languages, use the flag-and-code dropdown in the header; the selection persists in a cookie.
+Open <http://localhost:3000/companies>. Unauthenticated visits go to `/sign-in`; enter any display name and demo password, then click **Sign in to demo**. Both fields are required. The app generates a fake token automatically and stores the display name for the header. The password is discarded after sign-in and is never sent to the API or stored. Use a made-up password. The token lives in this tab's `sessionStorage`; it is attached to API requests but is **not** a real credential. Sign out clears it and cached company data. A 401 also clears the session and returns to sign-in, preserving a validated local destination. To change languages, use the flag-and-code dropdown in the header; the selection persists in a cookie.
 
 ```sh
 pnpm lint
