@@ -3,6 +3,7 @@
 import { isServer, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocalizationProvider } from "@/i18n/provider";
+import { SessionProvider } from "@/auth/provider";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { Locale } from "@/i18n/locale";
 
@@ -25,7 +26,7 @@ export function Providers({
   return (
     <QueryClientProvider client={getQueryClient()}>
       <LocalizationProvider locale={locale} dictionary={dictionary}>
-        {children}
+        <SessionProvider>{children}</SessionProvider>
       </LocalizationProvider>
     </QueryClientProvider>
   );

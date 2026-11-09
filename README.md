@@ -1,6 +1,6 @@
 # NovAI assessment
 
-Next.js 16 App Router foundation with React 19, strict TypeScript, Tailwind CSS, TanStack Query, and English/Dutch localization. The companies screen is intentionally a placeholder; API, auth, and company features follow in later stages.
+A bilingual Companies workspace built with Next.js 16 App Router, React 19, strict TypeScript, Tailwind CSS, and TanStack Query. It includes assessment-only sign-in, an authenticated mock API, and a searchable, filterable, sortable, paginated companies list. Company creation, detail and editing drawers, and conflict recovery are planned for a later stage.
 
 ## Prerequisites
 
@@ -49,4 +49,10 @@ curl -X POST -H 'Authorization: Bearer demo' -H 'Content-Type: application/json'
 
 The server seeds exactly 40 deterministic records. List defaults are limit 20, offset 0, no filter, and newest first; limit must be 1–100 and offset a nonnegative safe integer. Search covers names and domains without case sensitivity; sorting uses ID as a tie-breaker. Names are trimmed and cannot be blank; omitted domain becomes `null`, omitted status becomes `new`. Invalid query/body fields return 422 with field errors, malformed JSON returns 400, missing records return 404, and a stale `if_version` returns 409 with the latest record in `error.details.current`. Error bodies use `{ "error": { "code", "message", "details" } }`.
 
-The store is **in-memory and single-process only**: it resets on server restart and is not shared across workers/instances (including serverless deployments). It is for local assessment use, not durable production storage. The typed client takes an injected token getter and optional 401 callback; sign-in and token storage are deferred to the next stage. Query options are created via `createCompanyQueries(client)`; `companyKeys.lists()` and `.details()` are invalidation prefixes.
+The store is **in-memory and single-process only**: it resets on server restart and is not shared across workers/instances (including serverless deployments). It is for local assessment use, not durable production storage. The typed client takes an injected token getter and optional 401 callback. Query options are created via `createCompanyQueries(client)`; `companyKeys.lists()` and `.details()` are invalidation prefixes.
+
+## Companies workspace and fake sign-in
+
+Open `/companies`. Without a session, the app redirects to `/sign-in` and preserves the requested local path and query string. Enter **any nonempty token**; it is stored in this tab's `sessionStorage` and sent as a bearer token to the mock API. This is assessment-only authentication, **not real identity or authorization**: the mock API accepts any nonempty bearer value. The server does not validate a real user. Sign out removes the token and all cached company data. A 401 does the same and returns to sign-in. No environment variable or external authentication service is needed.
+
+The list uses `q`, `status`, `sort`, and `page` in `/companies` as its source of truth. Defaults are an empty search, all statuses, newest first, and page 1 (20 rows). Invalid status, sort, or page values fall back to defaults without rewriting the URL; changing a control writes a normalized value. Search input is debounced by 350 ms and **replaces** the current history entry so each keystroke does not create a Back stop. Filter, sort and page actions **push** a history entry; filter/sort/search changes reset page to 1. Back/Forward and refresh restore controls and results. Other parameters are preserved for the later drawer. During a new request the old rows remain visible, with an updating announcement; pagination waits for authoritative bounds. Language switching keeps the URL, session, and client query cache.
